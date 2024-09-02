@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { reactive, ref } from "vue"
+import { reactive, ref, computed } from "vue"
 import { useRouter } from "vue-router"
 import { useUserStore } from "@/store/modules/user"
 import { type FormInstance, type FormRules } from "element-plus"
@@ -9,10 +9,12 @@ import { type LoginRequestData } from "@/api/login/types/login"
 import ThemeSwitch from "@/components/ThemeSwitch/index.vue"
 import Owl from "./components/Owl.vue"
 import { useFocus } from "./hooks/useFocus"
-
+import { useTheme, DEFAULT_THEME_NAME } from "@/hooks/useTheme"
+import logoText1 from "@/assets/layouts/logo-text-1.png"
+import logoText2 from "@/assets/layouts/logo-text-2.png"
 const router = useRouter()
 const { isFocus, handleBlur, handleFocus } = useFocus()
-
+const { activeThemeName } = useTheme()
 /** 登录表单元素的引用 */
 const loginFormRef = ref<FormInstance | null>(null)
 
@@ -67,7 +69,9 @@ const createCode = () => {
     codeUrl.value = res.data
   })
 }
-
+const logoSrc = computed(() => {
+  return activeThemeName.value !== DEFAULT_THEME_NAME ? logoText1 : logoText2
+})
 /** 初始化验证码 */
 createCode()
 </script>
@@ -78,7 +82,7 @@ createCode()
     <Owl :close-eyes="isFocus" />
     <div class="login-card">
       <div class="title">
-        <img src="@/assets/layouts/logo-text-2.png" />
+        <img :src="logoSrc" />
       </div>
       <div class="content">
         <el-form ref="loginFormRef" :model="loginFormData" :rules="loginFormRules" @keyup.enter="handleLogin">
