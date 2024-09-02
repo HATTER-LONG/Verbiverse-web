@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue"
+import { onMounted, ref } from "vue"
 interface Props {
   url: string // pdf文件地址
 }
 const props = defineProps<Props>()
 const pdfUrl = ref("") // pdf文件地址
 const fileUrl = "/pdfjs/web/viewer.html?file=" // pdfjs文件地址
+const currentPage = ref(1)
 const toolbarVisible = ref(false)
 const toolbarStyle = ref({
   top: "0px",
-  left: "0px"
+  left: "0px",
+  backgroundColor: "white",
+  border: "1px solid #ccc",
+  padding: "10px",
+  zIndex: 1000
 })
+
 const button1Action = () => {
   console.log("Button 1 clicked")
 }
@@ -18,43 +24,38 @@ const button1Action = () => {
 const button2Action = () => {
   console.log("Button 2 clicked")
 }
-const showToolbar = (selection: string) => {
-  if (selection) {
-    console.log("选中的文本:", selection)
-    toolbarVisible.value = true
-    toolbarStyle.value.top = "100 px"
-    toolbarStyle.value.left = "100 px"
-  } else {
-    toolbarVisible.value = false
-  }
+
+const showToolbar = (event: MouseEvent, selected: string) => {
+  console.log(selected)
+  toolbarVisible.value = true
+  toolbarStyle.value.top = `${event.clientY}px`
+  toolbarStyle.value.left = `${event.clientX}px`
 }
+
 onMounted(() => {
-  // encodeURIComponent() 函数可把字符串作为 URI 组件进行编码。
-  // 核心就是将 iframe 的 src 属性设置为 pdfjs 的地址，然后将 pdf 文件的地址作为参数传递给 pdfjs
-  // 例如：http://localhost:8080/pdfjs-4.0.189-dist/web/viewer.html?file=http://localhost:8080/pdf/test.pdf
   pdfUrl.value = fileUrl + encodeURIComponent(props.url)
   const iframe = document.querySelector("iframe")
   if (iframe) {
     iframe.addEventListener("load", () => {
-      const script = `
-        document.addEventListener('mouseup', () => {
-          const selectedText = window.getSelection().toString();
-          if (selectedText) {
-            window.parent.postMessage({ type: 'textSelected', text: selectedText }, '*');
-          }
-        });
-      `
-      const scriptElement = document.createElement("script")
-      scriptElement.textContent = script
-      iframe.contentWindow?.document.body.appendChild(scriptElement)
-    })
-  }
-})
+      iframe.contentWindow?.addEventListener("mouseup", (event: MouseEvent) => {
+        const selection = iframe.contentWindow?.getSelection()?.toString()
+        if (selection) {
+          showToolbar(event, selection)
+        } else {
+          toolbarVisible.value = false
+        }
+      })
 
-window.addEventListener("message", (event) => {
-  if (event.data.type === "textSelected") {
-    console.log("选中的文本2:", event.data.text)
-    showToolbar(event.data.text)
+      // 获取 PDF 页数
+      const pdfViewerApp = (iframe.contentWindow as any)?.PDFViewerApplication
+      if (pdfViewerApp) {
+        console.log(`pdf path: ${pdfViewerApp.baseUrl}`)
+        pdfViewerApp.eventBus.on("pagechanging", (event: any) => {
+          currentPage.value = event.pageNumber
+          console.log(`Current page: ${currentPage.value}`)
+        })
+      }
+    })
   }
 })
 </script>
