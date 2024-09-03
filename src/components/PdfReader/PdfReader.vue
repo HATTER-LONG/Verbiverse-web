@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue"
+import { onMounted, ref, onUnmounted } from "vue"
 interface Props {
   url: string // pdf文件地址
 }
@@ -31,31 +31,46 @@ const showToolbar = (event: MouseEvent, selected: string) => {
   toolbarStyle.value.top = `${event.clientY}px`
   toolbarStyle.value.left = `${event.clientX}px`
 }
+let iframe: HTMLIFrameElement | null = null
+let mouseUpListener: ((event: MouseEvent) => void) | null = null
+let pageChangingListener: ((event: any) => void) | null = null
 
 onMounted(() => {
   pdfUrl.value = fileUrl + encodeURIComponent(props.url)
-  const iframe = document.querySelector("iframe")
+  iframe = document.querySelector("iframe")
   if (iframe) {
     iframe.addEventListener("load", () => {
-      iframe.contentWindow?.addEventListener("mouseup", (event: MouseEvent) => {
-        const selection = iframe.contentWindow?.getSelection()?.toString()
+      mouseUpListener = (event: MouseEvent) => {
+        const selection = iframe?.contentWindow?.getSelection()?.toString()
         if (selection) {
           showToolbar(event, selection)
         } else {
           toolbarVisible.value = false
         }
-      })
+      }
+      iframe?.contentWindow?.addEventListener("mouseup", mouseUpListener)
 
       // 获取 PDF 页数
-      const pdfViewerApp = (iframe.contentWindow as any)?.PDFViewerApplication
+      const pdfViewerApp = (iframe?.contentWindow as any)?.PDFViewerApplication
       if (pdfViewerApp) {
         console.log(`pdf path: ${pdfViewerApp.baseUrl}`)
-        pdfViewerApp.eventBus.on("pagechanging", (event: any) => {
+        pageChangingListener = (event: any) => {
           currentPage.value = event.pageNumber
           console.log(`Current page: ${currentPage.value}`)
-        })
+        }
+        pdfViewerApp.eventBus.on("pagechanging", pageChangingListener)
       }
     })
+  }
+})
+
+onUnmounted(() => {
+  if (iframe && mouseUpListener) {
+    iframe.contentWindow?.removeEventListener("mouseup", mouseUpListener)
+  }
+  const pdfViewerApp = (iframe?.contentWindow as any)?.PDFViewerApplication
+  if (pdfViewerApp && pageChangingListener) {
+    pdfViewerApp.eventBus.off("pagechanging", pageChangingListener)
   }
 })
 </script>
