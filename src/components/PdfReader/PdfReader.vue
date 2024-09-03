@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, onUnmounted } from "vue"
+import ToolBar from "@/components/ToolBar/ToolBar.vue"
 interface Props {
   url: string // pdf文件地址
 }
@@ -8,33 +9,26 @@ const pdfUrl = ref("") // pdf文件地址
 const fileUrl = "/pdfjs/web/viewer.html?file=" // pdfjs文件地址
 const currentPage = ref(1)
 const toolbarVisible = ref(false)
-const toolbarStyle = ref({
-  top: "0px",
-  left: "0px",
-  backgroundColor: "white",
-  border: "1px solid #ccc",
-  padding: "10px",
-  zIndex: 1000
-})
-
-const button1Action = () => {
-  console.log("Button 1 clicked")
-}
-
-const button2Action = () => {
-  console.log("Button 2 clicked")
-}
+const toolbarPosition = ref({ top: "0px", left: "0px" })
+const selectedText = ref("")
 
 const showToolbar = (event: MouseEvent, selected: string) => {
-  console.log(selected)
+  console.log(event)
   toolbarVisible.value = true
-  toolbarStyle.value.top = `${event.clientY}px`
-  toolbarStyle.value.left = `${event.clientX}px`
+  toolbarPosition.value.top = `${event.clientY}px`
+  toolbarPosition.value.left = `${event.clientX}px`
+  selectedText.value = selected
 }
 let iframe: HTMLIFrameElement | null = null
 let mouseUpListener: ((event: MouseEvent) => void) | null = null
 let pageChangingListener: ((event: any) => void) | null = null
+const handleButton1Click = () => {
+  console.log("Button 1 clicked in ToolBar")
+}
 
+const handleButton2Click = () => {
+  console.log("Button 2 clicked in ToolBar")
+}
 onMounted(() => {
   pdfUrl.value = fileUrl + encodeURIComponent(props.url)
   iframe = document.querySelector("iframe")
@@ -78,10 +72,13 @@ onUnmounted(() => {
 <template>
   <div class="container">
     <iframe :src="pdfUrl" width="100%" height="100%" />
-    <div v-if="toolbarVisible" :style="toolbarStyle" class="toolbar">
-      <button @click="button1Action">按钮1</button>
-      <button @click="button2Action">按钮2</button>
-    </div>
+    <ToolBar
+      v-if="toolbarVisible"
+      :style="{ position: 'absolute', top: toolbarPosition.top, left: toolbarPosition.left }"
+      :selected_text="selectedText"
+      @button1Click="handleButton1Click"
+      @button2Click="handleButton2Click"
+    />
   </div>
 </template>
 
